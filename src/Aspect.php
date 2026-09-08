@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Sotvokun\Webman\Aop;
 
 use Attribute;
-use Ray\Aop\MethodInterceptor;
-
 #[Attribute(Attribute::TARGET_METHOD)]
 abstract class Aspect
 {

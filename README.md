@@ -63,14 +63,14 @@ final class ExampleAspect extends Aspect
 }
 ```
 
-An interceptor implements `Ray\Aop\MethodInterceptor`:
+An interceptor implements `Sotvokun\Webman\Aop\MethodInterceptor`:
 
 ```php
 <?php
 
 namespace module\order\interceptor;
 
-use Ray\Aop\MethodInterceptor;
+use Sotvokun\Webman\Aop\MethodInterceptor;
 use Ray\Aop\MethodInvocation;
 
 final class ExampleInterceptor implements MethodInterceptor

@@ -63,14 +63,14 @@ final class ExampleAspect extends Aspect
 }
 ```
 
-拦截器需要实现 `Ray\Aop\MethodInterceptor`：
+拦截器需要实现 `Sotvokun\Webman\Aop\MethodInterceptor`：
 
 ```php
 <?php
 
 namespace module\order\interceptor;
 
-use Ray\Aop\MethodInterceptor;
+use Sotvokun\Webman\Aop\MethodInterceptor;
 use Ray\Aop\MethodInvocation;
 
 final class ExampleInterceptor implements MethodInterceptor
