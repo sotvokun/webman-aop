@@ -30,23 +30,14 @@ return [
 ];
 ```
 
-Replace the default container in `config/container.php` with the package container:
+Create or replace the container in `config/container.php` with the package container:
 
 ```php
 <?php
 
 use Sotvokun\Webman\Aop\Container;
 
-$container = new Container();
-
-foreach (config('dependence.bind', []) as $abstract => $concrete) {
-    $container->bind($abstract, $concrete);
-}
-foreach (config('dependence.singleton', []) as $abstract => $concrete) {
-    $container->singleton($abstract, $concrete);
-}
-
-return $container;
+return new Container();
 ```
 
 ## Define an Aspect

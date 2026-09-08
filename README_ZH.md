@@ -30,23 +30,14 @@ return [
 ];
 ```
 
-在 `config/container.php` 中将默认容器替换为插件提供的容器：
+在 `config/container.php` 中创建或替换为插件提供的容器：
 
 ```php
 <?php
 
 use Sotvokun\Webman\Aop\Container;
 
-$container = new Container();
-
-foreach (config('dependence.bind', []) as $abstract => $concrete) {
-    $container->bind($abstract, $concrete);
-}
-foreach (config('dependence.singleton', []) as $abstract => $concrete) {
-    $container->singleton($abstract, $concrete);
-}
-
-return $container;
+return new Container();
 ```
 
 ## 定义切面
