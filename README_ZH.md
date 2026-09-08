@@ -71,7 +71,7 @@ final class ExampleAspect extends Aspect
 namespace module\order\interceptor;
 
 use Sotvokun\Webman\Aop\MethodInterceptor;
-use Ray\Aop\MethodInvocation;
+use Sotvokun\Webman\Aop\MethodInvocation;
 
 final class ExampleInterceptor implements MethodInterceptor
 {
