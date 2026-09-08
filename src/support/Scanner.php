@@ -21,6 +21,12 @@ final class Scanner
     /** @var array<class-string, list<class-string<Aspect>>> */
     private array $targets = [];
 
+    /** @var array<class-string, string> */
+    private array $classMap;
+
+    /** @var array<class-string, true> */
+    private array $inspected = [];
+
     /** @param list<string> $directories */
     public function __construct(array $directories)
     {
@@ -31,19 +37,14 @@ final class Scanner
             }
         }
 
-        foreach ($classMapGenerator->getClassMap()->getMap() as $class => $file) {
-            if (!class_exists($class)) {
-                require_once $file;
-            }
-            if (class_exists($class, false)) {
-                $this->inspect($class);
-            }
-        }
+        $this->classMap = $classMapGenerator->getClassMap()->getMap();
     }
 
     /** @param class-string $class */
     public function shouldWeave(string $class): bool
     {
+        $this->inspectIfScanned($class);
+
         return isset($this->targets[$class]);
     }
 
@@ -54,16 +55,34 @@ final class Scanner
      */
     public function attributesFor(string $class): array
     {
+        $this->inspectIfScanned($class);
+
         return $this->targets[$class] ?? [];
+    }
+
+    /** @param class-string $class */
+    private function inspectIfScanned(string $class): void
+    {
+        if (isset($this->inspected[$class])) {
+            return;
+        }
+        $this->inspected[$class] = true;
+
+        if (!isset($this->classMap[$class])) {
+            return;
+        }
+
+        if (!class_exists($class, false)) {
+            require_once $this->classMap[$class];
+        }
+        if (class_exists($class, false)) {
+            $this->inspect($class);
+        }
     }
 
     /** @param class-string $class */
     private function inspect(string $class): void
     {
-        if (isset($this->targets[$class])) {
-            return;
-        }
-
         $reflection = new ReflectionClass($class);
         $this->assertWeavableClass($reflection);
         $attributes = [];

@@ -24,10 +24,6 @@ final class Manager
     /** @param list<string> $scanDirectories */
     public function __construct(private readonly string $generatedClassDirectory, array $scanDirectories)
     {
-        if (!is_dir($this->generatedClassDirectory) && !mkdir($this->generatedClassDirectory, 0775, true) && !is_dir($this->generatedClassDirectory)) {
-            throw new RuntimeException("Unable to create AOP cache directory: {$this->generatedClassDirectory}");
-        }
-
         $this->scanner = new Scanner($scanDirectories);
     }
 
@@ -43,6 +39,7 @@ final class Manager
      */
     public function newInstance(string $class, array $arguments, Container $container): object
     {
+        $this->ensureGeneratedClassDirectory();
         $aspect = new Aspect($this->generatedClassDirectory);
         $matcher = new Matcher();
 
@@ -55,6 +52,13 @@ final class Manager
         }
 
         return $aspect->newInstance($class, $arguments);
+    }
+
+    private function ensureGeneratedClassDirectory(): void
+    {
+        if (!is_dir($this->generatedClassDirectory) && !mkdir($this->generatedClassDirectory, 0775, true) && !is_dir($this->generatedClassDirectory)) {
+            throw new RuntimeException("Unable to create AOP cache directory: {$this->generatedClassDirectory}");
+        }
     }
 
     /**

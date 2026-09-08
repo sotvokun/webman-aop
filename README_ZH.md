@@ -71,7 +71,7 @@ final class ExampleAspect extends Aspect
 namespace module\order\interceptor;
 
 use Sotvokun\Webman\Aop\MethodInterceptor;
-use Sotvokun\Webman\Aop\MethodInvocation;
+use Ray\Aop\MethodInvocation;
 
 final class ExampleInterceptor implements MethodInterceptor
 {
@@ -146,4 +146,4 @@ final class ExampleInterceptor implements MethodInterceptor
 
 ## 代理缓存
 
-`Bootstrap` 会在每次 Webman 重启时清空 `class_path`。清理过程使用文件锁，因此多个 worker 不会并发清理同一个目录。每个 worker 首次解析目标 Service 时，会重新生成对应的代理类。
+每个 worker 会将代理类写入 `class_path/<worker-pid>`。worker reload 后，替代它的新 worker 拥有新的 PID，会生成全新的代理类，不会影响仍在运行的其他 worker。`Bootstrap` 会在每次 Webman 完整重启时清空整个 `class_path`；清理过程使用文件锁，因此多个 worker 不会并发清理同一个目录。

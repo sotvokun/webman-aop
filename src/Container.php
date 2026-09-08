@@ -18,8 +18,12 @@ final class Container extends IlluminateContainer
 
     public function build($concrete)
     {
+        if ($concrete instanceof Closure || !is_string($concrete) || is_a($concrete, SelfBuilding::class, true)) {
+            return parent::build($concrete);
+        }
+
         $aop = $this->aop();
-        if ($concrete instanceof Closure || !is_string($concrete) || !$aop->shouldWeave($concrete) || is_a($concrete, SelfBuilding::class, true)) {
+        if (!$aop->shouldWeave($concrete)) {
             return parent::build($concrete);
         }
 
@@ -41,6 +45,9 @@ final class Container extends IlluminateContainer
 
     private function aop(): Manager
     {
-        return $this->aop ??= new Manager(Config::getClassPath(), Config::getScanDirs());
+        return $this->aop ??= new Manager(
+            Config::getClassPath() . DIRECTORY_SEPARATOR . getmypid(),
+            Config::getScanDirs(),
+        );
     }
 }

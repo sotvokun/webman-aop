@@ -71,7 +71,7 @@ An interceptor implements `Sotvokun\Webman\Aop\MethodInterceptor`:
 namespace module\order\interceptor;
 
 use Sotvokun\Webman\Aop\MethodInterceptor;
-use Sotvokun\Webman\Aop\MethodInvocation;
+use Ray\Aop\MethodInvocation;
 
 final class ExampleInterceptor implements MethodInterceptor
 {
@@ -146,4 +146,4 @@ Returning `new ExampleInterceptor()` bypasses container construction for that in
 
 ## Generated Proxy Cache
 
-`Bootstrap` clears `class_path` once per Webman restart, protected by a file lock so multiple workers do not clear it concurrently. The first resolution of a target service in each worker regenerates its proxy class.
+Each worker writes proxy classes to `class_path/<worker-pid>`. When a worker reloads, its replacement has a new PID and generates fresh proxy classes without affecting running workers. `Bootstrap` clears the entire `class_path` once per Webman restart, protected by a file lock so multiple workers do not clear it concurrently.
