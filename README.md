@@ -50,15 +50,15 @@ An Aspect is a PHP Attribute extending `Sotvokun\Webman\Aop\Aspect`. Its `interc
 namespace module\order\aspect;
 
 use Attribute;
-use module\order\interceptor\TransactionInterceptor;
+use module\order\interceptor\ExampleInterceptor;
 use Sotvokun\Webman\Aop\Aspect;
 
 #[Attribute(Attribute::TARGET_METHOD)]
-final class Transactional extends Aspect
+final class ExampleAspect extends Aspect
 {
     public static function interceptors(): array
     {
-        return [TransactionInterceptor::class];
+        return [ExampleInterceptor::class];
     }
 }
 ```
@@ -73,7 +73,7 @@ namespace module\order\interceptor;
 use Ray\Aop\MethodInterceptor;
 use Ray\Aop\MethodInvocation;
 
-final class TransactionInterceptor implements MethodInterceptor
+final class ExampleInterceptor implements MethodInterceptor
 {
     public function invoke(MethodInvocation $invocation): mixed
     {
@@ -93,11 +93,11 @@ Apply the Aspect to a service method located in a configured scan directory:
 
 namespace module\order\service;
 
-use module\order\aspect\Transactional;
+use module\order\aspect\ExampleAspect;
 
 class OrderService
 {
-    #[Transactional]
+    #[ExampleAspect]
     public function create(array $input): void
     {
         // Business logic.
@@ -121,7 +121,7 @@ final class OrderController
 When `interceptors()` returns a class name, the package creates it through the Webman container. Constructor dependencies are therefore injected normally:
 
 ```php
-final class TransactionInterceptor implements MethodInterceptor
+final class ExampleInterceptor implements MethodInterceptor
 {
     public function __construct(private readonly ConnectionInterface $connection)
     {
@@ -134,7 +134,7 @@ final class TransactionInterceptor implements MethodInterceptor
 }
 ```
 
-Returning `new TransactionInterceptor()` bypasses container construction for that interceptor.
+Returning `new ExampleInterceptor()` bypasses container construction for that interceptor.
 
 ## Constraints
 

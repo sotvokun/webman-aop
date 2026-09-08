@@ -50,15 +50,15 @@ return new Container();
 namespace module\order\aspect;
 
 use Attribute;
-use module\order\interceptor\TransactionInterceptor;
+use module\order\interceptor\ExampleInterceptor;
 use Sotvokun\Webman\Aop\Aspect;
 
 #[Attribute(Attribute::TARGET_METHOD)]
-final class Transactional extends Aspect
+final class ExampleAspect extends Aspect
 {
     public static function interceptors(): array
     {
-        return [TransactionInterceptor::class];
+        return [ExampleInterceptor::class];
     }
 }
 ```
@@ -73,7 +73,7 @@ namespace module\order\interceptor;
 use Ray\Aop\MethodInterceptor;
 use Ray\Aop\MethodInvocation;
 
-final class TransactionInterceptor implements MethodInterceptor
+final class ExampleInterceptor implements MethodInterceptor
 {
     public function invoke(MethodInvocation $invocation): mixed
     {
@@ -93,11 +93,11 @@ final class TransactionInterceptor implements MethodInterceptor
 
 namespace module\order\service;
 
-use module\order\aspect\Transactional;
+use module\order\aspect\ExampleAspect;
 
 class OrderService
 {
-    #[Transactional]
+    #[ExampleAspect]
     public function create(array $input): void
     {
         // 业务逻辑。
@@ -121,7 +121,7 @@ final class OrderController
 当 `interceptors()` 返回拦截器类名时，插件会通过 Webman 容器创建该拦截器，因此构造函数依赖会被正常注入：
 
 ```php
-final class TransactionInterceptor implements MethodInterceptor
+final class ExampleInterceptor implements MethodInterceptor
 {
     public function __construct(private readonly ConnectionInterface $connection)
     {
@@ -134,7 +134,7 @@ final class TransactionInterceptor implements MethodInterceptor
 }
 ```
 
-若返回 `new TransactionInterceptor()`，该拦截器由业务代码自行构造，不会经过容器注入。
+若返回 `new ExampleInterceptor()`，该拦截器由业务代码自行构造，不会经过容器注入。
 
 ## 使用限制
 
