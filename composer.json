@@ -1,0 +1,17 @@
+{
+  "name": "sotvokun/webman-aop",
+  "type": "library",
+  "license": "MIT",
+  "description": "Webman plugin sotvokun/webman-aop",
+  "require": {
+    "illuminate/container": "^13.31",
+    "ray/aop": "^2.20",
+    "composer/class-map-generator": "^1.7",
+    "workerman/webman-framework": "^2.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "Sotvokun\\Webman\\Aop\\": "src"
+    }
+  }
+}
