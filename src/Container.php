@@ -13,13 +13,17 @@ use ReflectionParameter;
 use Illuminate\Container\Container as IlluminateContainer;
 use Illuminate\Contracts\Container\SelfBuilding;
 use Sotvokun\Webman\Aop\Attribute\Lazy;
+use Sotvokun\Webman\Aop\support\AopLazyProxyFactory;
 use Sotvokun\Webman\Aop\support\Config;
+use Sotvokun\Webman\Aop\support\LazyProxyFactory;
 use Sotvokun\Webman\Aop\support\Manager;
 
 /** Webman's container with transparent Ray.Aop construction and lazy injection. */
 final class Container extends IlluminateContainer
 {
     private Manager|null $aop = null;
+    private LazyProxyFactory|null $lazy = null;
+    private AopLazyProxyFactory|null $aopLazy = null;
 
     public function build($concrete)
     {
@@ -53,21 +57,21 @@ final class Container extends IlluminateContainer
         }
 
         $reflector = new ReflectionClass($className);
-        $this->assertLazyProxyable($reflector, $parameter);
-
         $aop = $this->aop();
-        $proxy = $aop->shouldWeave($className)
-            ? $aop->newLazyProxy(
+        if ($aop->shouldWeave($className)) {
+            return $this->aopLazy()->create(
                 $className,
+                $reflector,
+                $parameter,
                 $this,
                 fn (): array => $this->resolveAopArguments($className),
                 function (object $instance) use ($reflector): void {
                     $this->fireAfterResolvingAttributeCallbacks($reflector->getAttributes(), $instance);
                 },
-            )
-            : $reflector->newLazyProxy(fn (object $proxy): object => $this->make($className));
+            );
+        }
 
-        return $proxy;
+        return $this->lazy()->create($reflector, $parameter, fn (object $proxy): object => $this->make($className));
     }
 
     private function classNameFor(ReflectionParameter $parameter): string|null
@@ -102,51 +106,21 @@ final class Container extends IlluminateContainer
         }
     }
 
-    private function assertLazyProxyable(ReflectionClass $class, ReflectionParameter $parameter): void
-    {
-        $dependency = "Lazy dependency \${$parameter->getName()}";
-        if (!$class->isInstantiable()) {
-            throw new LogicException("{$dependency} must have an instantiable class type.");
-        }
-
-        if ($this->extendsUnsupportedInternalClass($class)) {
-            throw new LogicException("{$dependency} cannot be lazily proxied because {$class->getName()} is internal or extends an internal class.");
-        }
-
-        if (!$this->hasBackedInstanceProperty($class)) {
-            throw new LogicException("{$dependency} must have at least one non-static, non-virtual instance property.");
-        }
-    }
-
-    private function extendsUnsupportedInternalClass(ReflectionClass $class): bool
-    {
-        for ($candidate = $class; $candidate !== false; $candidate = $candidate->getParentClass()) {
-            if ($candidate->isInternal() && $candidate->getName() !== \stdClass::class) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function hasBackedInstanceProperty(ReflectionClass $class): bool
-    {
-        for ($candidate = $class; $candidate !== false; $candidate = $candidate->getParentClass()) {
-            foreach ($candidate->getProperties() as $property) {
-                if (!$property->isStatic() && !$property->isVirtual()) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     private function aop(): Manager
     {
         return $this->aop ??= new Manager(
             Config::getClassPath() . DIRECTORY_SEPARATOR . getmypid(),
             Config::getScanDirs(),
         );
+    }
+
+    private function lazy(): LazyProxyFactory
+    {
+        return $this->lazy ??= new LazyProxyFactory();
+    }
+
+    private function aopLazy(): AopLazyProxyFactory
+    {
+        return $this->aopLazy ??= new AopLazyProxyFactory($this->aop(), $this->lazy());
     }
 }
