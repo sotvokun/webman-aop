@@ -172,11 +172,9 @@ final class ReportController
 }
 ```
 
-### 与 AOP 的限制
+### 延迟 AOP 服务
 
-`#[Lazy]` 不能和 AOP 方法 Attribute 标在*同一个依赖服务*上。`#[Lazy] ReportService` 会创建一个 PHP proxy；其真实对象必须是 `ReportService`。但如果 `ReportService` 的方法带有 AOP Attribute，Ray.Aop 会构造一个动态生成的子类。PHP 无法将这个子类对象附着到 `ReportService` 的 lazy proxy 上。
-
-可以像上一段示例那样，将 AOP Attribute 标在使用该依赖的服务上；或者不要延迟注入 `ReportService`：
+`#[Lazy]` 可以用于其公开方法带有 AOP Attribute 的依赖。容器会先生成 Ray.Aop 的子类，再基于这个生成类创建 PHP lazy proxy。因此服务首次初始化时，真实对象与 lazy proxy 的类相同，拦截器也会正常生效：
 
 ```php
 use module\order\aspect\ExampleAspect;
@@ -187,7 +185,7 @@ final class ReportService
     {
     }
 
-    #[ExampleAspect] // 注入 ReportService 时不要使用 #[Lazy]。
+    #[ExampleAspect]
     public function latest(): array
     {
         // ...

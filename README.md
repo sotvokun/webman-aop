@@ -172,11 +172,9 @@ final class ReportController
 }
 ```
 
-### AOP limitation
+### Lazy AOP services
 
-`#[Lazy]` and an AOP method attribute cannot be applied to the *same dependency*. `#[Lazy] ReportService` creates a PHP proxy whose real object must be a `ReportService`. An AOP attribute on `ReportService` instead makes Ray.Aop construct a generated child class. PHP cannot attach that child object to the `ReportService` lazy proxy.
-
-Put the AOP attribute on the consuming service, as in the preceding example, or inject `ReportService` eagerly:
+`#[Lazy]` can be used on a dependency whose public methods have AOP attributes. The container first generates Ray.Aop's child class, then creates the PHP lazy proxy from that generated class. When the service is first initialized, the real object therefore has the same class as its lazy proxy and interceptors remain active:
 
 ```php
 use module\order\aspect\ExampleAspect;
@@ -187,7 +185,7 @@ final class ReportService
     {
     }
 
-    #[ExampleAspect] // Remove #[Lazy] from the ReportService injection.
+    #[ExampleAspect]
     public function latest(): array
     {
         // ...

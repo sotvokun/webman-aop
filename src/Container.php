@@ -33,14 +33,7 @@ final class Container extends IlluminateContainer
         }
 
         $reflector = new ReflectionClass($concrete);
-        $constructor = $reflector->getConstructor();
-        $this->buildStack[] = $concrete;
-
-        try {
-            $arguments = $constructor === null ? [] : $this->resolveDependencies($constructor->getParameters());
-        } finally {
-            array_pop($this->buildStack);
-        }
+        $arguments = $this->resolveAopArguments($concrete);
 
         $instance = $aop->newInstance($concrete, $arguments, $this);
         $this->fireAfterResolvingAttributeCallbacks($reflector->getAttributes(), $instance);
@@ -64,9 +57,17 @@ final class Container extends IlluminateContainer
             throw new LogicException("Lazy dependency \${$parameter->getName()} must have an instantiable class type.");
         }
 
-        $proxy = $reflector->newLazyProxy(
-            fn (object $proxy): object => $this->make($className),
-        );
+        $aop = $this->aop();
+        $proxy = $aop->shouldWeave($className)
+            ? $aop->newLazyProxy(
+                $className,
+                $this,
+                fn (): array => $this->resolveAopArguments($className),
+                function (object $instance) use ($reflector): void {
+                    $this->fireAfterResolvingAttributeCallbacks($reflector->getAttributes(), $instance);
+                },
+            )
+            : $reflector->newLazyProxy(fn (object $proxy): object => $this->make($className));
 
         if (!$reflector->isUninitializedLazyObject($proxy)) {
             throw new LogicException("Lazy dependency \${$parameter->getName()} must have a non-static instance property.");
@@ -90,6 +91,21 @@ final class Container extends IlluminateContainer
             'parent' => $class?->getParentClass()?->getName(),
             default => $name,
         };
+    }
+
+    /** @param class-string $concrete
+     *  @return list<mixed>
+     */
+    private function resolveAopArguments(string $concrete): array
+    {
+        $constructor = (new ReflectionClass($concrete))->getConstructor();
+        $this->buildStack[] = $concrete;
+
+        try {
+            return $constructor === null ? [] : $this->resolveDependencies($constructor->getParameters());
+        } finally {
+            array_pop($this->buildStack);
+        }
     }
 
     private function aop(): Manager

@@ -6,9 +6,12 @@ namespace Sotvokun\Webman\Aop\support;
 
 use Illuminate\Container\Container;
 use InvalidArgumentException;
-use Ray\Aop\Aspect;
-use Ray\Aop\Matcher;
+use Ray\Aop\Bind;
 use Ray\Aop\MethodInterceptor;
+use Ray\Aop\Weaver;
+use ReflectionAttribute;
+use ReflectionClass;
+use ReflectionMethod;
 use RuntimeException;
 use Sotvokun\Webman\Aop\Attribute\Aspect as AspectAttribute;
 
@@ -39,19 +42,56 @@ final class Manager
      */
     public function newInstance(string $class, array $arguments, Container $container): object
     {
+        return $this->weaver($class, $container)->newInstance($class, $arguments);
+    }
+
+    /**
+     * Create a lazy proxy for the generated AOP class.
+     *
+     * PHP lazy proxies can only attach an instance of their own class (or a
+     * compatible parent). Ray.Aop returns a generated child class, so that
+     * generated class—not the original service class—must be made lazy.
+     *
+     * @param class-string $class
+     * @param callable(): list<mixed> $argumentsFactory
+     * @param callable(object): void $afterResolving
+     */
+    public function newLazyProxy(
+        string $class,
+        Container $container,
+        callable $argumentsFactory,
+        callable $afterResolving,
+    ): object
+    {
+        $weaver = $this->weaver($class, $container);
+        $aopClass = $weaver->weave($class);
+        $reflector = new ReflectionClass($aopClass);
+
+        return $reflector->newLazyProxy(function (object $proxy) use ($weaver, $class, $argumentsFactory, $afterResolving): object {
+            $instance = $weaver->newInstance($class, $argumentsFactory());
+            $afterResolving($instance);
+
+            return $instance;
+        });
+    }
+
+    /** @param class-string $class */
+    private function weaver(string $class, Container $container): Weaver
+    {
         $this->ensureGeneratedClassDirectory();
-        $aspect = new Aspect($this->generatedClassDirectory);
-        $matcher = new Matcher();
+        $bind = new Bind();
+        $reflection = new ReflectionClass($class);
 
         foreach ($this->scanner->attributesFor($class) as $attribute) {
-            $aspect->bind(
-                $matcher->any(),
-                $matcher->annotatedWith($attribute),
-                $this->resolveInterceptors($attribute, $container),
-            );
+            $interceptors = $this->resolveInterceptors($attribute, $container);
+            foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+                if ($method->getAttributes($attribute, ReflectionAttribute::IS_INSTANCEOF) !== []) {
+                    $bind->bindInterceptors($method->getName(), $interceptors);
+                }
+            }
         }
 
-        return $aspect->newInstance($class, $arguments);
+        return new Weaver($bind, $this->generatedClassDirectory);
     }
 
     private function ensureGeneratedClassDirectory(): void
