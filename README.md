@@ -151,7 +151,9 @@ final class ReportController
 }
 ```
 
-The dependency type must be an instantiable class with at least one non-static property. Interfaces, union types, and classes without instance properties cannot be lazily proxied.
+The dependency type must be an instantiable, user-defined class with at least one non-static, non-virtual instance property (an inherited property also qualifies). Interfaces, union types, internal classes and their subclasses, and classes with no backed instance property are rejected immediately with a `LogicException`. Although PHP permits `stdClass`, it has no declared backed property and is therefore also rejected by this container.
+
+PHP initializes a lazy proxy when its state is observed or changed. A method call that does not access object state does not initialize it. The factory must return a non-lazy instance of the proxy's class (or a compatible parent); the container guarantees this for normal services and for generated Ray.Aop classes.
 
 The consuming service may use AOP attributes. The proxy is injected while the consuming service is constructed, and `ReportService` remains lazy:
 

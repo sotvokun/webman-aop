@@ -53,9 +53,7 @@ final class Container extends IlluminateContainer
         }
 
         $reflector = new ReflectionClass($className);
-        if (!$reflector->isInstantiable()) {
-            throw new LogicException("Lazy dependency \${$parameter->getName()} must have an instantiable class type.");
-        }
+        $this->assertLazyProxyable($reflector, $parameter);
 
         $aop = $this->aop();
         $proxy = $aop->shouldWeave($className)
@@ -68,10 +66,6 @@ final class Container extends IlluminateContainer
                 },
             )
             : $reflector->newLazyProxy(fn (object $proxy): object => $this->make($className));
-
-        if (!$reflector->isUninitializedLazyObject($proxy)) {
-            throw new LogicException("Lazy dependency \${$parameter->getName()} must have a non-static instance property.");
-        }
 
         return $proxy;
     }
@@ -106,6 +100,46 @@ final class Container extends IlluminateContainer
         } finally {
             array_pop($this->buildStack);
         }
+    }
+
+    private function assertLazyProxyable(ReflectionClass $class, ReflectionParameter $parameter): void
+    {
+        $dependency = "Lazy dependency \${$parameter->getName()}";
+        if (!$class->isInstantiable()) {
+            throw new LogicException("{$dependency} must have an instantiable class type.");
+        }
+
+        if ($this->extendsUnsupportedInternalClass($class)) {
+            throw new LogicException("{$dependency} cannot be lazily proxied because {$class->getName()} is internal or extends an internal class.");
+        }
+
+        if (!$this->hasBackedInstanceProperty($class)) {
+            throw new LogicException("{$dependency} must have at least one non-static, non-virtual instance property.");
+        }
+    }
+
+    private function extendsUnsupportedInternalClass(ReflectionClass $class): bool
+    {
+        for ($candidate = $class; $candidate !== false; $candidate = $candidate->getParentClass()) {
+            if ($candidate->isInternal() && $candidate->getName() !== \stdClass::class) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function hasBackedInstanceProperty(ReflectionClass $class): bool
+    {
+        for ($candidate = $class; $candidate !== false; $candidate = $candidate->getParentClass()) {
+            foreach ($candidate->getProperties() as $property) {
+                if (!$property->isStatic() && !$property->isVirtual()) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function aop(): Manager

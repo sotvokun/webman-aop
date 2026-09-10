@@ -151,7 +151,9 @@ final class ReportController
 }
 ```
 
-依赖类型必须是包含至少一个非静态属性的可实例化类。接口、联合类型及没有实例属性的类无法进行延迟代理。
+依赖类型必须是可实例化的用户定义类，且至少包含一个非静态、非 virtual 的实例属性（继承的属性也可以）。接口、联合类型、内部类及其子类，以及没有 backed 实例属性的类，都会在注入阶段立即以 `LogicException` 拒绝。虽然 PHP 允许 `stdClass`，但它没有声明的 backed 属性，因此本容器同样会拒绝它。
+
+PHP 会在观察或修改 lazy proxy 的对象状态时初始化它；不访问对象状态的方法调用不会触发初始化。factory 必须返回与 proxy 同类（或兼容父类）的非 lazy 实例；容器会为普通服务和 Ray.Aop 生成类保证该条件。
 
 使用该依赖的服务可以使用 AOP Attribute。构造 `ReportController` 时会注入代理，`ReportService` 仍保持未实例化状态：
 
