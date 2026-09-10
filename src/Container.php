@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace Sotvokun\Webman\Aop;
 
 use Closure;
+use LogicException;
+use ReflectionAttribute;
 use ReflectionClass;
+use ReflectionNamedType;
+use ReflectionParameter;
 use Illuminate\Container\Container as IlluminateContainer;
 use Illuminate\Contracts\Container\SelfBuilding;
+use Sotvokun\Webman\Aop\Attribute\Lazy;
 use Sotvokun\Webman\Aop\support\Config;
 use Sotvokun\Webman\Aop\support\Manager;
 
-/** Webman's container with transparent Ray.Aop construction for scanned classes. */
+/** Webman's container with transparent Ray.Aop construction and lazy injection. */
 final class Container extends IlluminateContainer
 {
     private Manager|null $aop = null;
@@ -41,6 +46,50 @@ final class Container extends IlluminateContainer
         $this->fireAfterResolvingAttributeCallbacks($reflector->getAttributes(), $instance);
 
         return $instance;
+    }
+
+    protected function resolveClass(ReflectionParameter $parameter, ?string $className = null): mixed
+    {
+        if ($parameter->getAttributes(Lazy::class, ReflectionAttribute::IS_INSTANCEOF) === []) {
+            return parent::resolveClass($parameter, $className);
+        }
+
+        $className ??= $this->classNameFor($parameter);
+        if ($className === null) {
+            throw new LogicException("Lazy dependency \${$parameter->getName()} must have a concrete class type.");
+        }
+
+        $reflector = new ReflectionClass($className);
+        if (!$reflector->isInstantiable()) {
+            throw new LogicException("Lazy dependency \${$parameter->getName()} must have an instantiable class type.");
+        }
+
+        $proxy = $reflector->newLazyProxy(
+            fn (object $proxy): object => $this->make($className),
+        );
+
+        if (!$reflector->isUninitializedLazyObject($proxy)) {
+            throw new LogicException("Lazy dependency \${$parameter->getName()} must have a non-static instance property.");
+        }
+
+        return $proxy;
+    }
+
+    private function classNameFor(ReflectionParameter $parameter): string|null
+    {
+        $type = $parameter->getType();
+        if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) {
+            return null;
+        }
+
+        $name = $type->getName();
+        $class = $parameter->getDeclaringClass();
+
+        return match ($name) {
+            'self' => $class?->getName(),
+            'parent' => $class?->getParentClass()?->getName(),
+            default => $name,
+        };
     }
 
     private function aop(): Manager

@@ -136,6 +136,65 @@ final class ExampleInterceptor implements MethodInterceptor
 
 Returning `new ExampleInterceptor()` bypasses container construction for that interceptor.
 
+## Lazy Injection
+
+Mark a class-typed constructor dependency with `#[Sotvokun\Webman\Aop\Attribute\Lazy]`. The container injects a proxy and resolves the real service only when its state is first accessed:
+
+```php
+use Sotvokun\Webman\Aop\Attribute\Lazy;
+
+final class ReportController
+{
+    public function __construct(#[Lazy] private ReportService $reports)
+    {
+    }
+}
+```
+
+The dependency type must be an instantiable class with at least one non-static property. Interfaces, union types, and classes without instance properties cannot be lazily proxied.
+
+The consuming service may use AOP attributes. The proxy is injected while the consuming service is constructed, and `ReportService` remains lazy:
+
+```php
+use module\order\aspect\ExampleAspect;
+
+final class ReportController
+{
+    public function __construct(#[Lazy] private ReportService $reports)
+    {
+    }
+
+    #[ExampleAspect]
+    public function show(): array
+    {
+        return $this->reports->latest();
+    }
+}
+```
+
+### AOP limitation
+
+`#[Lazy]` and an AOP method attribute cannot be applied to the *same dependency*. `#[Lazy] ReportService` creates a PHP proxy whose real object must be a `ReportService`. An AOP attribute on `ReportService` instead makes Ray.Aop construct a generated child class. PHP cannot attach that child object to the `ReportService` lazy proxy.
+
+Put the AOP attribute on the consuming service, as in the preceding example, or inject `ReportService` eagerly:
+
+```php
+use module\order\aspect\ExampleAspect;
+
+final class ReportService
+{
+    public function __construct(private ReportClient $client)
+    {
+    }
+
+    #[ExampleAspect] // Remove #[Lazy] from the ReportService injection.
+    public function latest(): array
+    {
+        // ...
+    }
+}
+```
+
 ## Constraints
 
 - Only classes under `scan_dirs` are considered.

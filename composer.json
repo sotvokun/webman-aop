@@ -4,6 +4,7 @@
   "license": "MIT",
   "description": "Webman plugin sotvokun/webman-aop",
   "require": {
+    "php": "^8.4",
     "illuminate/container": "^13.31",
     "ray/aop": "^2.20",
     "composer/class-map-generator": "^1.7",

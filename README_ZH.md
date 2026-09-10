@@ -136,6 +136,65 @@ final class ExampleInterceptor implements MethodInterceptor
 
 若返回 `new ExampleInterceptor()`，该拦截器由业务代码自行构造，不会经过容器注入。
 
+## 延迟注入
+
+为构造函数中带类类型的依赖添加 `#[Sotvokun\Webman\Aop\Attribute\Lazy]`。容器会先注入代理，直到首次访问该服务的对象状态时才解析真实服务：
+
+```php
+use Sotvokun\Webman\Aop\Attribute\Lazy;
+
+final class ReportController
+{
+    public function __construct(#[Lazy] private ReportService $reports)
+    {
+    }
+}
+```
+
+依赖类型必须是包含至少一个非静态属性的可实例化类。接口、联合类型及没有实例属性的类无法进行延迟代理。
+
+使用该依赖的服务可以使用 AOP Attribute。构造 `ReportController` 时会注入代理，`ReportService` 仍保持未实例化状态：
+
+```php
+use module\order\aspect\ExampleAspect;
+
+final class ReportController
+{
+    public function __construct(#[Lazy] private ReportService $reports)
+    {
+    }
+
+    #[ExampleAspect]
+    public function show(): array
+    {
+        return $this->reports->latest();
+    }
+}
+```
+
+### 与 AOP 的限制
+
+`#[Lazy]` 不能和 AOP 方法 Attribute 标在*同一个依赖服务*上。`#[Lazy] ReportService` 会创建一个 PHP proxy；其真实对象必须是 `ReportService`。但如果 `ReportService` 的方法带有 AOP Attribute，Ray.Aop 会构造一个动态生成的子类。PHP 无法将这个子类对象附着到 `ReportService` 的 lazy proxy 上。
+
+可以像上一段示例那样，将 AOP Attribute 标在使用该依赖的服务上；或者不要延迟注入 `ReportService`：
+
+```php
+use module\order\aspect\ExampleAspect;
+
+final class ReportService
+{
+    public function __construct(private ReportClient $client)
+    {
+    }
+
+    #[ExampleAspect] // 注入 ReportService 时不要使用 #[Lazy]。
+    public function latest(): array
+    {
+        // ...
+    }
+}
+```
+
 ## 使用限制
 
 - 仅扫描 `scan_dirs` 配置的目录。
