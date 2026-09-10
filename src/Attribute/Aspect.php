@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Sotvokun\Webman\Aop;
+namespace Sotvokun\Webman\Aop\Attribute;
 
 use Attribute;
+use Sotvokun\Webman\Aop\MethodInterceptor;
+
 #[Attribute(Attribute::TARGET_METHOD)]
 abstract class Aspect
 {

@@ -9,7 +9,7 @@ use InvalidArgumentException;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
-use Sotvokun\Webman\Aop\Aspect;
+use Sotvokun\Webman\Aop\Attribute\Aspect;
 
 use function array_unique;
 use function class_exists;

@@ -10,7 +10,7 @@ use Ray\Aop\Aspect;
 use Ray\Aop\Matcher;
 use Ray\Aop\MethodInterceptor;
 use RuntimeException;
-use Sotvokun\Webman\Aop\Aspect as AspectAttribute;
+use Sotvokun\Webman\Aop\Attribute\Aspect as AspectAttribute;
 
 use function is_dir;
 use function is_string;
